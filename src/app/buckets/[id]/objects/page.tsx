@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { useBucketObjects, downloadObject, deleteObject, deleteObjects, S3Object } from "@/hooks/api/objects";
+import FileUploadComponent from "@/components/upload/file-upload";
 
 export default function BucketObjectsPage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function BucketObjectsPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
+  const [showUpload, setShowUpload] = useState(false);
   
   // 处理面包屑导航
   const pathParts = currentPrefix ? currentPrefix.split('/').filter(Boolean) : [];
@@ -92,8 +94,13 @@ export default function BucketObjectsPage() {
   };
 
   const handleUpload = () => {
-    // TODO: 实现上传功能
-    toast.info("上传功能开发中");
+    setShowUpload(true);
+  };
+
+  const handleUploadComplete = () => {
+    setShowUpload(false);
+    refetch();
+    toast.success("文件上传完成");
   };
 
   const toggleObjectSelection = (objectKey: string) => {
@@ -351,6 +358,21 @@ export default function BucketObjectsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 上传组件 */}
+      {showUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="max-w-4xl w-full mx-4">
+            <FileUploadComponent
+              bucketId={bucketId}
+              bucketName={bucketName}
+              currentPrefix={currentPrefix}
+              onUploadComplete={handleUploadComplete}
+              onClose={() => setShowUpload(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

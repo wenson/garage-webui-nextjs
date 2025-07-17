@@ -21,6 +21,16 @@ export function useKey(keyId: string) {
   });
 }
 
+// 获取单个访问密钥详情（包含 SECRET KEY）
+export function useKeyWithSecret(keyId: string, enabled: boolean = false) {
+  return useQuery({
+    queryKey: ['keys', keyId, 'withSecret'],
+    queryFn: () => apiClient.getKeyWithSecret(keyId),
+    enabled: !!keyId && enabled,
+    staleTime: 0, // SECRET KEY 应该总是重新获取
+  });
+}
+
 // 创建访问密钥
 export function useCreateKey() {
   const queryClient = useQueryClient();

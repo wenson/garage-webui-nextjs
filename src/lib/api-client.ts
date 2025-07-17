@@ -11,6 +11,7 @@ import {
   GarageCreateKeyRequest,
   GarageKeyPermissions,
 } from "@/types";
+import { GetKeyInfoResponse } from "@/types/garage-api-v2";
 import { garageAPIv2 } from '@/lib/garage-api-v2';
 
 export class APIClient {
@@ -87,6 +88,12 @@ export class APIClient {
   async getKey(id: string): Promise<GarageKeyInfo> {
     const key = await garageAPIv2.getKeyInfo({ id });
     return key as unknown as GarageKeyInfo;
+  }
+
+  // 获取访问密钥信息（包含 SECRET KEY）
+  async getKeyWithSecret(id: string): Promise<GetKeyInfoResponse> {
+    const key = await garageAPIv2.getKeyInfo({ id, showSecretKey: true });
+    return key;
   }
 
   // 创建访问密钥
