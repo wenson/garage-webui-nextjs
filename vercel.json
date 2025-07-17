@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "GARAGE_API_BASE_URL": "@garage_api_base_url",
+    "GARAGE_API_ADMIN_KEY": "@garage_api_admin_key",
+    "AUTH_USER_PASS": "@auth_user_pass",
+    "JWT_SECRET": "@jwt_secret",
+    "NEXT_PUBLIC_DEFAULT_USERNAME": "@next_public_default_username",
+    "NEXT_PUBLIC_DEFAULT_PASSWORD": "@next_public_default_password"
+  },
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
+}

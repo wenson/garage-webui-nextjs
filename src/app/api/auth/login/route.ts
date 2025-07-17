@@ -5,14 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-prod
 
 // 简单的密码验证（生产环境应该使用 bcrypt）
 function verifyPassword(password: string, storedPassword: string): boolean {
-  // 如果存储的密码以 $2 开头，说明是 bcrypt hash，暂时直接比较
-  if (storedPassword.startsWith('$2')) {
-    // 在生产环境中应该使用 bcrypt.compare
-    // 这里暂时使用简单比较作为示例
-    return password === 'admin123' && storedPassword.includes('DSTi9oEsEm3KWr7LBWZlr');
-  }
-  
-  // 明文密码比较（仅开发环境）
+  // 明文密码比较（开发环境）
   return password === storedPassword;
 }
 
