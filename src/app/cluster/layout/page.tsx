@@ -62,18 +62,85 @@ export default function ClusterLayoutPage() {
     }));
   };
 
-  // 初始化时同步容量配置
-  useEffect(() => {
-    const initial = convertFromBytes(1000000000); // 使用默认的1GB
-    setCapacityConfig(initial);
-  }, []);  // 只在组件挂载时运行一次
-
   const { data: cluster, isLoading: clusterLoading, refetch: refetchCluster } = useClusterStatus();
   const { data: layout, isLoading: layoutLoading, refetch: refetchLayout } = useClusterLayout();
   const updateLayoutMutation = useUpdateClusterLayout();
   const applyLayoutMutation = useApplyClusterLayout();
 
   const isLoading = clusterLoading || layoutLoading;
+
+  // 计算空间统计 - 移到数据获取之后
+  const calculateSpaceStats = () => {
+    if (!cluster?.nodes || !layout?.roles) {
+      return {
+        totalPhysicalSpace: 0,
+        totalAllocatedCapacity: 0,
+        totalUsableCapacity: 0,
+        unallocatedSpace: 0,
+        availablePhysicalSpace: 0
+      };
+    }
+
+    // 计算物理空间
+    const totalPhysicalSpace = cluster.nodes.reduce((total, node) => {
+      return total + (node.dataPartition?.total || 0);
+    }, 0);
+
+    const availablePhysicalSpace = cluster.nodes.reduce((total, node) => {
+      return total + (node.dataPartition?.available || 0);
+    }, 0);
+
+    // 计算已分配的逻辑容量 - 检查 roles 是数组还是对象
+    let totalAllocatedCapacity = 0;
+    let totalUsableCapacity = 0;
+
+    if (Array.isArray(layout.roles)) {
+      totalAllocatedCapacity = layout.roles.reduce((total: number, role: Record<string, unknown>) => {
+        return total + (typeof role.capacity === 'number' ? role.capacity : 0);
+      }, 0);
+
+      totalUsableCapacity = layout.roles.reduce((total: number, role: Record<string, unknown>) => {
+        return total + (typeof role.usableCapacity === 'number' ? role.usableCapacity : 0);
+      }, 0);
+    } else if (typeof layout.roles === 'object') {
+      // 如果 roles 是对象，遍历其值
+      Object.values(layout.roles).forEach((role: unknown) => {
+        if (role && typeof role === 'object') {
+          const roleObj = role as Record<string, unknown>;
+          totalAllocatedCapacity += typeof roleObj.capacity === 'number' ? roleObj.capacity : 0;
+          totalUsableCapacity += typeof roleObj.usableCapacity === 'number' ? roleObj.usableCapacity : 0;
+        }
+      });
+    }
+
+    // 计算未分配空间（物理空间 - 已分配容量）
+    const unallocatedSpace = Math.max(0, totalPhysicalSpace - totalAllocatedCapacity);
+
+    return {
+      totalPhysicalSpace,
+      totalAllocatedCapacity,
+      totalUsableCapacity,
+      unallocatedSpace,
+      availablePhysicalSpace
+    };
+  };
+
+  const spaceStats = calculateSpaceStats();
+
+  // 格式化字节数为可读格式
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // 初始化时同步容量配置
+  useEffect(() => {
+    const initial = convertFromBytes(1000000000); // 使用默认的1GB
+    setCapacityConfig(initial);
+  }, []);
 
   const handleRefresh = async () => {
     try {
@@ -171,7 +238,7 @@ export default function ClusterLayoutPage() {
       </div>
 
       {/* 布局状态 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">布局版本</CardTitle>
@@ -210,7 +277,66 @@ export default function ClusterLayoutPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">未分配空间</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatBytes(spaceStats.unallocatedSpace)}</div>
+            <p className="text-xs text-muted-foreground">
+              物理空间 - 已分配容量
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* 空间统计详情 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Server className="h-5 w-5 mr-2" />
+            存储空间统计
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 border rounded-lg dark:border-gray-700">
+              <div className="text-2xl font-bold text-blue-600">{formatBytes(spaceStats.totalPhysicalSpace)}</div>
+              <p className="text-sm text-gray-500">总物理空间</p>
+            </div>
+            <div className="text-center p-4 border rounded-lg dark:border-gray-700">
+              <div className="text-2xl font-bold text-green-600">{formatBytes(spaceStats.availablePhysicalSpace)}</div>
+              <p className="text-sm text-gray-500">可用物理空间</p>
+            </div>
+            <div className="text-center p-4 border rounded-lg dark:border-gray-700">
+              <div className="text-2xl font-bold text-orange-600">{formatBytes(spaceStats.totalAllocatedCapacity)}</div>
+              <p className="text-sm text-gray-500">已分配容量</p>
+            </div>
+            <div className="text-center p-4 border rounded-lg dark:border-gray-700">
+              <div className="text-2xl font-bold text-red-600">{formatBytes(spaceStats.unallocatedSpace)}</div>
+              <p className="text-sm text-gray-500">未分配空间</p>
+            </div>
+          </div>
+          {spaceStats.totalPhysicalSpace > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>空间分配情况</span>
+                <span>{((spaceStats.totalAllocatedCapacity / spaceStats.totalPhysicalSpace) * 100).toFixed(1)}% 已分配</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full" 
+                  style={{ 
+                    width: `${Math.min(100, (spaceStats.totalAllocatedCapacity / spaceStats.totalPhysicalSpace) * 100)}%` 
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 节点列表和配置 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
