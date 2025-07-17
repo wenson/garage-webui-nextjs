@@ -101,17 +101,6 @@ npm run dev
 # 在浏览器中打开 http://localhost:3000
 ```
 
-### 方式二：Docker（即将推出）
-
-### Docker Configuration
-
-```bash
-docker run -p 3000:3000 \
-  -e GARAGE_API_BASE_URL=http://your-garage:3903 \
-  -e GARAGE_API_ADMIN_KEY=your-admin-token \
-  garage-webui-nextjs:latest
-```
-
 ## ⚙️ 配置
 
 ### 环境变量
