@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useClusterStatus, useClusterLayout, useUpdateClusterLayout, useApplyClusterLayout } from "@/hooks/api/cluster";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,46 @@ export default function ClusterLayoutPage() {
     capacity: 1000000000, // 1GB default
     tags: {} as Record<string, string>
   });
+
+  const [capacityConfig, setCapacityConfig] = useState({
+    value: 1,
+    unit: 'GB' as 'MB' | 'GB'
+  });
+
+  // 容量转换函数
+  const convertToBytes = (value: number, unit: 'MB' | 'GB'): number => {
+    const multipliers = {
+      'MB': 1024 * 1024,
+      'GB': 1024 * 1024 * 1024
+    };
+    return Math.floor(value * multipliers[unit]);
+  };
+
+  const convertFromBytes = (bytes: number): { value: number; unit: 'MB' | 'GB' } => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    const mb = bytes / (1024 * 1024);
+    
+    if (gb >= 1) {
+      return { value: Math.round(gb * 100) / 100, unit: 'GB' };
+    } else {
+      return { value: Math.round(mb * 100) / 100, unit: 'MB' };
+    }
+  };
+
+  // 更新容量配置时同步更新字节数
+  const handleCapacityChange = (value: number, unit: 'MB' | 'GB') => {
+    setCapacityConfig({ value, unit });
+    setNodeConfig(prev => ({ 
+      ...prev, 
+      capacity: convertToBytes(value, unit) 
+    }));
+  };
+
+  // 初始化时同步容量配置
+  useEffect(() => {
+    const initial = convertFromBytes(1000000000); // 使用默认的1GB
+    setCapacityConfig(initial);
+  }, []);  // 只在组件挂载时运行一次
 
   const { data: cluster, isLoading: clusterLoading, refetch: refetchCluster } = useClusterStatus();
   const { data: layout, isLoading: layoutLoading, refetch: refetchLayout } = useClusterLayout();
@@ -265,16 +305,29 @@ export default function ClusterLayoutPage() {
             </div>
 
             <div>
-              <Label htmlFor="capacity">存储容量 (字节)</Label>
-              <Input
-                id="capacity"
-                type="number"
-                value={nodeConfig.capacity}
-                onChange={(e) => setNodeConfig(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
-                placeholder="例如: 1000000000 (1GB)"
-              />
+              <Label htmlFor="capacity">存储容量</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="capacity"
+                  type="number"
+                  value={capacityConfig.value}
+                  onChange={(e) => handleCapacityChange(parseFloat(e.target.value) || 0, capacityConfig.unit)}
+                  placeholder="例如: 100"
+                  className="flex-1"
+                  min="0"
+                  step="0.1"
+                />
+                <select
+                  value={capacityConfig.unit}
+                  onChange={(e) => handleCapacityChange(capacityConfig.value, e.target.value as 'MB' | 'GB')}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="MB">MB</option>
+                  <option value="GB">GB</option>
+                </select>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                当前设置: {(nodeConfig.capacity / 1024 / 1024 / 1024).toFixed(2)} GB
+                总计: {(nodeConfig.capacity / 1024 / 1024 / 1024).toFixed(3)} GB ({nodeConfig.capacity.toLocaleString()} 字节)
               </p>
             </div>
 
