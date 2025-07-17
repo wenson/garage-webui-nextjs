@@ -2,26 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import Button from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
-import { 
-  ArrowLeft,
-  Settings, 
-  Globe,
-  Shield,
-  Database,
-  HardDrive,
-  FileText,
-  Copy,
-  ExternalLink
-} from "lucide-react";
-import { toast } from "sonner";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { toast } from "sonner";
 import { useBucket, useUpdateBucket, useBuckets } from "@/hooks/api/buckets";
 import { GetBucketInfoResponse } from "@/types/garage-api-v2";
+
+// 存储桶详情组件
+import { BucketDetailHeader } from "@/components/buckets/detail/bucket-detail-header";
+import { BucketStatsOverview } from "@/components/buckets/detail/bucket-stats-overview";
+import { BucketInfoCard } from "@/components/buckets/detail/bucket-info-card";
+import { WebsiteConfigCard } from "@/components/buckets/detail/website-config-card";
+import { QuotaConfigCard } from "@/components/buckets/detail/quota-config-card";
+import { S3ConnectionInfo } from "@/components/buckets/detail/s3-connection-info";
 
 export default function BucketDetailPage() {
   const router = useRouter();
@@ -68,7 +61,6 @@ export default function BucketDetailPage() {
 
   const handleSave = async () => {
     try {
-      // 构建更新请求
       const updateConfig = {
         websiteAccess: {
           enabled: formData.websiteAccess,
@@ -103,6 +95,14 @@ export default function BucketDetailPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const handleFormDataChange = (newData: Partial<typeof formData>) => {
+    setFormData(prev => ({ ...prev, ...newData }));
+  };
+
+  const handleBrowseObjects = () => {
+    router.push(`/buckets/${bucketId}/objects?name=${bucketName}`);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -114,21 +114,15 @@ export default function BucketDetailPage() {
   if (error || !bucket) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              存储桶详情
-            </h1>
-          </div>
-        </div>
+        <BucketDetailHeader
+          bucketName="存储桶详情"
+          isEditing={false}
+          onBack={() => router.back()}
+          onBrowseObjects={() => {}}
+          onEditToggle={() => {}}
+          onCancel={() => {}}
+          onSave={() => {}}
+        />
         
         <ErrorMessage 
           title="无法加载存储桶信息"
@@ -143,291 +137,54 @@ export default function BucketDetailPage() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {bucketName}
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              存储桶配置和管理
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/buckets/${bucketId}/objects?name=${bucketName}`)}
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            浏览对象
-          </Button>
-          {isEditing ? (
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => setIsEditing(false)}
-              >
-                取消
-              </Button>
-              <Button onClick={handleSave}>
-                保存更改
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              编辑配置
-            </Button>
-          )}
-        </div>
-      </div>
+      <BucketDetailHeader
+        bucketName={bucketName}
+        isEditing={isEditing}
+        onBack={() => router.back()}
+        onBrowseObjects={handleBrowseObjects}
+        onEditToggle={() => setIsEditing(true)}
+        onCancel={() => setIsEditing(false)}
+        onSave={handleSave}
+      />
 
-      {/* 基本信息 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">对象数量</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(bucket as GetBucketInfoResponse).objects || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              个文件对象
-            </p>
-          </CardContent>
-        </Card>
+      {/* 存储桶统计概览 */}
+      <BucketStatsOverview 
+        bucket={bucket as GetBucketInfoResponse}
+        formatBytes={formatBytes}
+      />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">存储大小</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatBytes((bucket as GetBucketInfoResponse).bytes || 0)}</div>
-            <p className="text-xs text-muted-foreground">
-              已使用空间
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">访问密钥</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(bucket as GetBucketInfoResponse).keys?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              个授权密钥
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">未完成上传</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(bucket as GetBucketInfoResponse).unfinishedUploads || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              个待完成
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 存储桶信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Database className="h-5 w-5 mr-2" />
-            存储桶信息
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">存储桶ID</label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    value={bucket.id}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(bucket.id)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">全局别名</label>
-                <div className="flex flex-wrap gap-2">
-                  {bucket.globalAliases?.map((alias: string, index: number) => (
-                    <Badge key={index} variant="secondary">
-                      {alias}
-                    </Badge>
-                  ))}
-                  {bucket.globalAliases?.length === 0 && (
-                    <span className="text-sm text-gray-500">无</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 存储桶基本信息 */}
+      <BucketInfoCard 
+        bucket={bucket}
+        onCopyToClipboard={copyToClipboard}
+      />
 
       {/* 网站配置 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Globe className="h-5 w-5 mr-2" />
-            网站配置
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="websiteAccess"
-                checked={formData.websiteAccess}
-                onChange={(e) => setFormData({ ...formData, websiteAccess: e.target.checked })}
-                disabled={!isEditing}
-                className="rounded"
-              />
-              <label htmlFor="websiteAccess" className="text-sm font-medium">
-                启用静态网站托管
-              </label>
-            </div>
-
-            {formData.websiteAccess && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">索引文档</label>
-                  <Input
-                    placeholder="index.html"
-                    value={formData.indexDocument}
-                    onChange={(e) => setFormData({ ...formData, indexDocument: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">错误文档</label>
-                  <Input
-                    placeholder="error.html"
-                    value={formData.errorDocument}
-                    onChange={(e) => setFormData({ ...formData, errorDocument: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <WebsiteConfigCard 
+        formData={{
+          websiteAccess: formData.websiteAccess,
+          indexDocument: formData.indexDocument,
+          errorDocument: formData.errorDocument
+        }}
+        isEditing={isEditing}
+        onFormDataChange={handleFormDataChange}
+      />
 
       {/* 配额设置 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <HardDrive className="h-5 w-5 mr-2" />
-            配额设置
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">最大存储空间 (MB)</label>
-              <Input
-                type="number"
-                placeholder="无限制"
-                value={formData.maxSize}
-                onChange={(e) => setFormData({ ...formData, maxSize: e.target.value })}
-                disabled={!isEditing}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">最大对象数量</label>
-              <Input
-                type="number"
-                placeholder="无限制"
-                value={formData.maxObjects}
-                onChange={(e) => setFormData({ ...formData, maxObjects: e.target.value })}
-                disabled={!isEditing}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <QuotaConfigCard 
+        formData={{
+          maxSize: formData.maxSize,
+          maxObjects: formData.maxObjects
+        }}
+        isEditing={isEditing}
+        onFormDataChange={handleFormDataChange}
+      />
 
       {/* S3 连接信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <ExternalLink className="h-5 w-5 mr-2" />
-            S3 连接信息
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Endpoint URL</label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  value="http://localhost:3900"
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard("http://localhost:3900")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Bucket Name</label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  value={bucket.globalAliases?.[0] || bucket.id}
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(bucket.globalAliases?.[0] || bucket.id)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <S3ConnectionInfo 
+        bucket={bucket}
+        onCopyToClipboard={copyToClipboard}
+      />
     </div>
   );
 }
