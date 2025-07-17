@@ -1,103 +1,114 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useClusterStatus, useHealth, useBuckets, useKeys } from "@/hooks/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
+import StatsCard from "@/components/dashboard/stats-card";
+import ClusterOverview from "@/components/dashboard/cluster-overview";
+import RecentActivity from "@/components/dashboard/recent-activity";
+// import EnvironmentStatus from "@/components/environment/environment-status";
+import { Server, Database, Key, Activity, AlertTriangle } from "lucide-react";
+
+export default function DashboardPage() {
+  const { data: health, isLoading: healthLoading } = useHealth();
+  const { data: cluster, isLoading: clusterLoading } = useClusterStatus();
+  const { data: buckets, isLoading: bucketsLoading } = useBuckets();
+  const { data: keys, isLoading: keysLoading } = useKeys();
+
+  const isLoading = healthLoading || clusterLoading || bucketsLoading || keysLoading;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Loading text="加载仪表板数据..." />
+      </div>
+    );
+  }
+
+  const healthStatus = health?.status || 'unknown';
+  const nodeCount = cluster?.nodes?.length || 0;
+  const bucketCount = buckets?.length || 0;
+  const keyCount = keys?.length || 0;
+
+  const onlineNodes = cluster?.nodes?.filter(node => 
+    node.isUp === true
+  ).length || 0;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="space-y-6">
+      {/* 页面标题 */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          仪表板
+        </h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Garage 对象存储服务管理概览
+        </p>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {/* 健康状态提醒 */}
+      {healthStatus !== 'healthy' && (
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
+          <CardContent className="flex items-center p-4">
+            <AlertTriangle className="h-5 w-5 text-orange-600 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                服务状态异常
+              </p>
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                请检查集群健康状态和节点连接
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 环境服务状态 */}
+      {/* <EnvironmentStatus /> */}
+
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="集群健康状态"
+          value={healthStatus === 'healthy' ? '正常' : '异常'}
+          icon={Activity}
+          trend={healthStatus === 'healthy' ? 'up' : 'down'}
+          className={healthStatus === 'healthy' ? 'text-green-600' : 'text-red-600'}
+        />
+        
+        <StatsCard
+          title="在线节点"
+          value={`${onlineNodes}/${nodeCount}`}
+          subtitle={`总共 ${nodeCount} 个节点`}
+          icon={Server}
+          trend={onlineNodes === nodeCount ? 'up' : onlineNodes > 0 ? 'stable' : 'down'}
+        />
+        
+        <StatsCard
+          title="存储桶"
+          value={bucketCount}
+          subtitle="个存储桶"
+          icon={Database}
+          trend="stable"
+        />
+        
+        <StatsCard
+          title="访问密钥"
+          value={keyCount}
+          subtitle="个访问密钥"
+          icon={Key}
+          trend="stable"
+        />
+      </div>
+
+      {/* 主要内容区域 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 集群概览 */}
+        <ClusterOverview cluster={cluster} />
+        
+        {/* 最近活动 */}
+        <RecentActivity />
+      </div>
     </div>
   );
 }
