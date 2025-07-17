@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { garageAPIv2 } from '@/lib/garage-api-v2';
 
 // 定义对象类型
 export interface S3Object {
