@@ -5,14 +5,6 @@
   "installCommand": "npm ci",
   "framework": "nextjs",
   "regions": ["iad1"],
-  "env": {
-    "GARAGE_API_BASE_URL": "@GARAGE_API_BASE_URL",
-    "GARAGE_API_ADMIN_KEY": "@GARAGE_API_ADMIN_KEY",
-    "AUTH_USER_PASS": "@AUTH_USER_PASS",
-    "JWT_SECRET": "@JWT_SECRET",
-    "NEXT_PUBLIC_DEFAULT_USERNAME": "@NEXT_PUBLIC_DEFAULT_USERNAME",
-    "NEXT_PUBLIC_DEFAULT_PASSWORD": "@NEXT_PUBLIC_DEFAULT_PASSWORD"
-  },
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
