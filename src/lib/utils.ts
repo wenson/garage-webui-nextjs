@@ -21,6 +21,13 @@ export function readableBytes(bytes: number | undefined): string {
 }
 
 /**
+ * Convert bytes to human readable format (alias for compatibility)
+ */
+export function formatBytes(bytes: number | undefined): string {
+  return readableBytes(bytes);
+}
+
+/**
  * Capitalize first letter
  */
 export function ucfirst(str: string | undefined): string {

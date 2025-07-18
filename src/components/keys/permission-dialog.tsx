@@ -218,6 +218,16 @@ export function PermissionDialog({
                 </Button>
               </div>
               
+              {/* 权限说明 */}
+              <div className="text-sm text-gray-600 dark:text-gray-400 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="font-medium text-blue-900 dark:text-blue-200 mb-2">权限说明：</p>
+                <ul className="space-y-1 text-blue-800 dark:text-blue-300">
+                  <li>• <strong>读取 (Read)</strong>：可以列出和下载存储桶中的对象</li>
+                  <li>• <strong>写入 (Write)</strong>：可以上传、修改和删除存储桶中的对象</li>
+                  <li>• <strong>所有者 (Owner)</strong>：拥有存储桶的完全控制权，包括管理权限</li>
+                </ul>
+              </div>
+              
               <div className="space-y-4">
                 {keyDetailedInfo?.buckets && keyDetailedInfo.buckets.length > 0 ? (
                   keyDetailedInfo.buckets.map((bucket, index: number) => (
@@ -249,7 +259,7 @@ export function PermissionDialog({
                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            {bucket.permissions?.read ? "可读" : "禁读"}
+                            {bucket.permissions?.read ? "读取权限" : "无读取权限"}
                           </Badge>
                           <Badge 
                             variant={bucket.permissions?.write ? "default" : "secondary"} 
@@ -261,7 +271,7 @@ export function PermissionDialog({
                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                            {bucket.permissions?.write ? "可写" : "禁写"}
+                            {bucket.permissions?.write ? "写入权限" : "无写入权限"}
                           </Badge>
                           <Badge 
                             variant={bucket.permissions?.owner ? "default" : "secondary"} 
@@ -273,7 +283,7 @@ export function PermissionDialog({
                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
-                            {bucket.permissions?.owner ? "所有者" : "非所有者"}
+                            {bucket.permissions?.owner ? "所有者权限" : "无所有者权限"}
                           </Badge>
                         </div>
                       </div>

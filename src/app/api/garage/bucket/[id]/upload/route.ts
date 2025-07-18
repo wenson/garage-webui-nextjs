@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateS3AuthHeaders } from '@/lib/s3-auth';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export async function POST(
   request: NextRequest
@@ -19,132 +19,73 @@ export async function POST(
     if (!file || !objectKey || !bucketName) {
       console.error('缺少必需参数');
       return NextResponse.json(
-        { error: 'Missing required parameters: file, objectKey, bucketName' },
+        { error: 'Missing required parameters: file, objectKey, or bucketName' },
         { status: 400 }
       );
     }
 
-    // 优先使用前端传递的密钥，其次使用环境变量
-    const accessKeyId = uploadAccessKeyId || process.env.GARAGE_S3_ACCESS_KEY_ID;
-    const secretAccessKey = uploadSecretAccessKey || process.env.GARAGE_S3_SECRET_ACCESS_KEY;
+    // 确定使用哪个 S3 认证
+    let accessKeyId: string;
+    let secretAccessKey: string;
     
+    if (uploadAccessKeyId && uploadSecretAccessKey) {
+      // 使用前端提供的密钥
+      accessKeyId = uploadAccessKeyId;
+      secretAccessKey = uploadSecretAccessKey;
+    } else {
+      // 使用环境变量
+      accessKeyId = process.env.GARAGE_S3_ACCESS_KEY_ID || '';
+      secretAccessKey = process.env.GARAGE_S3_SECRET_ACCESS_KEY || '';
+    }
+
     if (!accessKeyId || !secretAccessKey) {
+      console.error('缺少 S3 认证信息');
       return NextResponse.json(
-        { 
-          error: '无可用的上传凭据',
-          details: '请提供访问密钥或在环境变量中配置 GARAGE_S3_ACCESS_KEY_ID 和 GARAGE_S3_SECRET_ACCESS_KEY'
-        },
+        { error: 'Missing S3 credentials' },
         { status: 401 }
       );
     }
 
+    // 创建 S3 客户端
     const s3EndpointUrl = process.env.NEXT_PUBLIC_S3_ENDPOINT_URL || 'http://localhost:3900';
-    
-    // 构建 S3 PUT 请求 URL
-    const s3Url = new URL(`/${bucketName}/${objectKey}`, s3EndpointUrl);
-    
-    console.log(`准备上传到 S3: URL=${s3Url.toString()}`);
-    
-    // 创建 AbortController 用于超时控制
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.log('上传超时，中止请求');
-      controller.abort();
-    }, 10 * 60 * 1000); // 10分钟超时
-    
-    try {
-      let headers: Record<string, string>;
-      
-      if (accessKeyId && secretAccessKey) {
-        // 使用提供的 S3 认证
-        const s3Config = {
-          accessKeyId,
-          secretAccessKey,
-          endpoint: s3EndpointUrl,
-          bucket: bucketName
-        };
-        
-        headers = generateS3AuthHeaders(
-          'PUT',
-          s3Url.toString(),
-          file.type || 'application/octet-stream',
-          file.size,
-          s3Config
-        );
-        console.log(`使用 S3 认证上传 (密钥: ${accessKeyId})`);
-      } else {
-        // 回退到基本头部（用于测试）
-        headers = {
-          'Content-Type': file.type || 'application/octet-stream',
-          'Content-Length': file.size.toString(),
-        };
-        console.log('警告：使用无认证模式上传（仅用于测试）');
-      }
-      
-      // 使用 PUT 方法上传文件到 S3
-      const s3Response = await fetch(s3Url.toString(), {
-        method: 'PUT',
-        body: file,
-        headers,
-        signal: controller.signal,
-      });
+    const s3Client = new S3Client({
+      endpoint: s3EndpointUrl,
+      region: 'garage', // 使用garage作为区域
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+      forcePathStyle: true,
+      serviceId: 's3',
+    });
 
-      clearTimeout(timeoutId);
-      console.log(`S3 响应状态: ${s3Response.status}`);
+    console.log(`使用 S3 SDK 上传到: ${s3EndpointUrl}/${bucketName}/${objectKey}`);
 
-      if (!s3Response.ok) {
-        const errorText = await s3Response.text();
-        console.error('S3 upload failed:', s3Response.status, errorText);
-        
-        // 如果是认证错误，提供更详细的错误信息
-        if (s3Response.status === 401 || s3Response.status === 403) {
-          return NextResponse.json(
-            { 
-              error: 'S3 认证失败',
-              details: '请检查 GARAGE_S3_ACCESS_KEY_ID 和 GARAGE_S3_SECRET_ACCESS_KEY 环境变量是否正确设置',
-              status: s3Response.status,
-              rawError: errorText
-            },
-            { status: s3Response.status }
-          );
-        }
-        
-        return NextResponse.json(
-          { 
-            error: 'Failed to upload file to S3',
-            details: errorText,
-            status: s3Response.status
-          },
-          { status: s3Response.status }
-        );
-      }
+    // 将文件转换为 Buffer
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-      // 获取上传结果
-      const etag = s3Response.headers.get('etag');
-      
-      console.log(`上传成功: 对象键=${objectKey}, ETag=${etag}`);
-      
-      return NextResponse.json({
-        success: true,
-        message: 'File uploaded successfully',
-        objectKey,
-        size: file.size,
-        contentType: file.type,
-        etag,
-      });
+    // 创建上传命令
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+      Body: fileBuffer,
+      ContentType: file.type || 'application/octet-stream',
+      ContentLength: file.size,
+    });
 
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        return NextResponse.json(
-          { error: 'Upload timeout - file too large or network too slow' },
-          { status: 408 }
-        );
-      }
-      
-      throw fetchError; // 重新抛出给外层 catch
-    }
+    // 执行上传
+    const response = await s3Client.send(command);
+    
+    console.log(`上传成功: ETag=${response.ETag}`);
+    
+    return NextResponse.json({
+      success: true,
+      message: 'File uploaded successfully',
+      objectKey,
+      size: file.size,
+      contentType: file.type,
+      etag: response.ETag,
+    });
 
   } catch (error) {
     console.error('Upload error:', error);

@@ -41,9 +41,29 @@ interface GarageApiError extends Error {
   message: string;
 }
 
+interface KeyDetailedInfo {
+  accessKeyId: string;
+  name: string;
+  expired: boolean;
+  permissions: {
+    createBucket?: boolean;
+  };
+  buckets: Array<{
+    id: string;
+    globalAliases?: string[];
+    localAliases?: string[];
+    permissions?: {
+      read?: boolean;
+      write?: boolean;
+      owner?: boolean;
+    };
+  }>;
+}
+
 interface BucketBindingDialogProps {
   isOpen: boolean;
   selectedKey: ActualKeyData | null;
+  keyDetailedInfo: KeyDetailedInfo | null;
   allBuckets: BucketInfo[];
   isLoadingBuckets: boolean;
   isSavingPermissions: boolean;
@@ -54,6 +74,7 @@ interface BucketBindingDialogProps {
 export function BucketBindingDialog({
   isOpen,
   selectedKey,
+  keyDetailedInfo,
   allBuckets,
   isLoadingBuckets,
   isSavingPermissions,
@@ -83,15 +104,24 @@ export function BucketBindingDialog({
     }
   };
 
-  const isKeyLinkedToBucket = (_bucketId: string) => {
-    // 简单返回false，因为这个函数在当前架构下不适用
-    // 实际的权限检查应该通过API调用获取
-    return false;
+  const isKeyLinkedToBucket = (bucketId: string) => {
+    if (!keyDetailedInfo) return false;
+    // 检查密钥的存储桶列表中是否包含这个存储桶
+    return keyDetailedInfo.buckets.some(bucket => bucket.id === bucketId);
   };
 
-  const getKeyPermissionsForBucket = (_bucketId: string): Record<string, boolean> => {
-    // 返回空权限对象，实际权限应该通过API获取
-    return {};
+  const getKeyPermissionsForBucket = (bucketId: string): Record<string, boolean> => {
+    if (!keyDetailedInfo) return {};
+    
+    // 查找这个存储桶的权限
+    const bucketInfo = keyDetailedInfo.buckets.find(bucket => bucket.id === bucketId);
+    if (!bucketInfo || !bucketInfo.permissions) return {};
+    
+    return {
+      read: bucketInfo.permissions.read || false,
+      write: bucketInfo.permissions.write || false,
+      owner: bucketInfo.permissions.owner || false,
+    };
   };
 
   return (
@@ -157,13 +187,13 @@ export function BucketBindingDialog({
                           {isLinked && (
                             <div className="flex items-center space-x-1">
                               {bucketPermissions.read && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">读</span>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">读取权限</span>
                               )}
                               {bucketPermissions.write && (
-                                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">写</span>
+                                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">写入权限</span>
                               )}
                               {bucketPermissions.owner && (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">所有者</span>
+                                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">所有者权限</span>
                               )}
                             </div>
                           )}

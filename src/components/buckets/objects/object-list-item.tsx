@@ -8,7 +8,8 @@ import {
   Download,
   Trash2,
   HardDrive,
-  Calendar
+  Calendar,
+  Eye
 } from "lucide-react";
 import { S3Object } from "@/hooks/api/objects";
 
@@ -19,6 +20,7 @@ interface ObjectListItemProps {
   onFolderClick: (folderKey: string) => void;
   onDownload: (objectKey: string) => void;
   onDelete: (objectKey: string) => void;
+  onDetail?: (object: S3Object) => void;
 }
 
 export function ObjectListItem({
@@ -27,7 +29,8 @@ export function ObjectListItem({
   onToggleSelection,
   onFolderClick,
   onDownload,
-  onDelete
+  onDelete,
+  onDetail
 }: ObjectListItemProps) {
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -91,6 +94,15 @@ export function ObjectListItem({
       
       {!object.isFolder && (
         <div className="flex items-center space-x-2">
+          {onDetail && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDetail(object)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

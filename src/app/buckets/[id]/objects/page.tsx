@@ -7,12 +7,14 @@ import Button from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { useBucketObjects, downloadObject, deleteObject, deleteObjects, S3Object } from "@/hooks/api/objects";
+import { useBucketObjects, downloadObject, deleteObject, deleteObjects, createFolder, renameObject, S3Object } from "@/hooks/api/objects";
 import { ObjectsPageHeader } from "@/components/buckets/objects/objects-page-header";
 import { BreadcrumbNavigation } from "@/components/buckets/objects/breadcrumb-navigation";
 import { ObjectsSearchAndActions } from "@/components/buckets/objects/objects-search-and-actions";
 import { ObjectsList } from "@/components/buckets/objects/objects-list";
 import { UploadModal } from "@/components/buckets/objects/upload-modal";
+import ObjectDetailModal from "@/components/buckets/objects/object-detail-modal";
+import CreateFolderModal from "@/components/buckets/objects/create-folder-modal";
 
 export default function BucketObjectsPage() {
   const router = useRouter();
@@ -26,10 +28,14 @@ export default function BucketObjectsPage() {
   // 使用真实的API hook
   const { data: objectsData, isLoading, error, refetch } = useBucketObjects(bucketId, currentPrefix, bucketName);
   const objects = objectsData?.objects || [];
+  const apiErrorMessage = objectsData?.error;
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
   const [showUpload, setShowUpload] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedObject, setSelectedObject] = useState<S3Object | null>(null);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
   
   // 处理面包屑导航
   const pathParts = currentPrefix ? currentPrefix.split('/').filter(Boolean) : [];
@@ -109,6 +115,44 @@ export default function BucketObjectsPage() {
     }
   };
 
+  const handleObjectDetail = (object: S3Object) => {
+    setSelectedObject(object);
+    setShowDetailModal(true);
+  };
+
+  const handleCreateFolder = async (folderName: string) => {
+    try {
+      const folderPath = currentPrefix + folderName;
+      const result = await createFolder(bucketId, folderPath, bucketName);
+      
+      if (result.success) {
+        toast.success(`文件夹 "${folderName}" 创建成功`);
+        refetch();
+      } else {
+        toast.error(result.error || '创建文件夹失败');
+      }
+    } catch (error) {
+      console.error('创建文件夹失败:', error);
+      toast.error('创建文件夹失败');
+    }
+  };
+
+  const handleRename = async (oldKey: string, newKey: string) => {
+    try {
+      const result = await renameObject(bucketId, oldKey, newKey, bucketName);
+      
+      if (result.success) {
+        toast.success('重命名成功');
+        refetch();
+      } else {
+        toast.error(result.error || '重命名失败');
+      }
+    } catch (error) {
+      console.error('重命名失败:', error);
+      toast.error('重命名失败');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -153,6 +197,7 @@ export default function BucketObjectsPage() {
         onUpload={handleUpload}
         onRefresh={() => refetch()}
         onBack={handleBack}
+        onCreateFolder={() => setShowCreateFolder(true)}
       />
 
       <BreadcrumbNavigation
@@ -176,6 +221,8 @@ export default function BucketObjectsPage() {
         onDownload={handleDownload}
         onDelete={handleDelete}
         onUpload={handleUpload}
+        onObjectDetail={handleObjectDetail}
+        errorMessage={apiErrorMessage}
       />
 
       <UploadModal
@@ -185,6 +232,27 @@ export default function BucketObjectsPage() {
         showUpload={showUpload}
         onUploadComplete={handleUploadComplete}
         onClose={() => setShowUpload(false)}
+      />
+
+      <ObjectDetailModal
+        object={selectedObject}
+        bucketId={bucketId}
+        bucketName={bucketName}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedObject(null);
+        }}
+        onDownload={handleDownload}
+        onDelete={handleDelete}
+        onRename={handleRename}
+      />
+
+      <CreateFolderModal
+        isOpen={showCreateFolder}
+        onClose={() => setShowCreateFolder(false)}
+        onCreateFolder={handleCreateFolder}
+        currentPrefix={currentPrefix}
       />
     </div>
   );

@@ -1,13 +1,16 @@
 'use client';
 
 import Button from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Shield } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface KeysPageHeaderProps {
   onCreateKey: () => void;
 }
 
 export function KeysPageHeader({ onCreateKey }: KeysPageHeaderProps) {
+  const router = useRouter();
+
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -19,13 +22,24 @@ export function KeysPageHeader({ onCreateKey }: KeysPageHeaderProps) {
         </p>
       </div>
       
-      <Button
-        onClick={onCreateKey}
-        className="flex items-center"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        创建密钥
-      </Button>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="secondary"
+          onClick={() => router.push('/keys/root-key')}
+          className="flex items-center"
+        >
+          <Shield className="h-4 w-4 mr-2" />
+          Root Key 管理
+        </Button>
+        
+        <Button
+          onClick={onCreateKey}
+          className="flex items-center"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          创建密钥
+        </Button>
+      </div>
     </div>
   );
 }

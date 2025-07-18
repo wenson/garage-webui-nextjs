@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 export async function GET(
   request: NextRequest,
@@ -47,44 +48,111 @@ export async function GET(
     }
 
     const bucketInfo = await bucketInfoResponse.json();
+    console.log(`存储桶信息获取成功: ${bucketInfo.id || bucketName}`);
     
-    // 现在使用 S3 API 获取对象列表
+    // 现在使用 AWS SDK 直接连接 S3
     const s3EndpointUrl = process.env.NEXT_PUBLIC_S3_ENDPOINT_URL || 'http://localhost:3900';
-    const s3Url = new URL(`/${bucketName}`, s3EndpointUrl);
-    s3Url.searchParams.set('list-type', '2');
-    s3Url.searchParams.set('delimiter', '/');
-    s3Url.searchParams.set('max-keys', '1000');
     
-    if (prefix) {
-      s3Url.searchParams.set('prefix', prefix);
-    }
+    // 获取S3认证信息
+    const s3AccessKeyId = process.env.GARAGE_S3_ACCESS_KEY_ID || '';
+    const s3SecretAccessKey = process.env.GARAGE_S3_SECRET_ACCESS_KEY || '';
     
-    if (continuationToken) {
-      s3Url.searchParams.set('continuation-token', continuationToken);
-    }
-
-    // 注意：这里需要 S3 访问密钥，但当前实现可能需要调整
-    // 暂时返回模拟数据或使用管理员权限
-    const s3Response = await fetch(s3Url.toString(), {
-      method: 'GET',
-      headers: {
-        'Host': new URL(s3EndpointUrl).host,
-        // 这里需要正确的 S3 签名，暂时简化处理
-      },
-    });
-
-    if (s3Response.ok) {
-      const xmlText = await s3Response.text();
-      const result = parseListObjectsV2Response(xmlText);
-      return NextResponse.json(result);
-    } else {
-      // 如果 S3 API 失败，返回基本的桶信息
+    if (!s3AccessKeyId || !s3SecretAccessKey) {
       return NextResponse.json({
         objects: [],
         prefixes: [],
         isTruncated: false,
-        nextContinuationToken: undefined,
-        bucketInfo: bucketInfo,
+        error: '缺少S3认证信息'
+      });
+    }
+
+    console.log(`使用S3 SDK连接: ${s3EndpointUrl}`);
+    console.log(`Access Key: ${s3AccessKeyId}`);
+    console.log(`Secret Key长度: ${s3SecretAccessKey.length}`);
+
+    // 创建S3客户端
+    const s3Client = new S3Client({
+      endpoint: s3EndpointUrl,
+      region: 'garage', // 使用garage作为区域
+      credentials: {
+        accessKeyId: s3AccessKeyId,
+        secretAccessKey: s3SecretAccessKey,
+      },
+      forcePathStyle: true, // 对于Garage很重要
+      // 禁用一些AWS特定的功能
+      serviceId: 's3',
+    });
+
+    try {
+      // 构建ListObjectsV2命令
+      const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix || undefined,
+        ContinuationToken: continuationToken || undefined,
+        Delimiter: '/',
+        MaxKeys: 1000,
+      });
+
+      console.log(`执行S3 ListObjectsV2命令:`, {
+        Bucket: bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      });
+
+      const response = await s3Client.send(command);
+      
+      console.log(`S3 SDK响应:`, {
+        KeyCount: response.KeyCount,
+        IsTruncated: response.IsTruncated,
+        CommonPrefixes: response.CommonPrefixes?.length || 0,
+        Contents: response.Contents?.length || 0,
+      });
+
+      // 转换为我们的格式
+      const objects = [];
+      
+      // 添加文件
+      if (response.Contents) {
+        for (const obj of response.Contents) {
+          objects.push({
+            key: obj.Key || '',
+            lastModified: obj.LastModified?.toISOString() || '',
+            etag: obj.ETag?.replace(/"/g, '') || '',
+            size: obj.Size || 0,
+            storageClass: obj.StorageClass || 'STANDARD',
+            isFolder: false,
+          });
+        }
+      }
+
+      // 添加文件夹
+      if (response.CommonPrefixes) {
+        for (const prefix of response.CommonPrefixes) {
+          objects.push({
+            key: prefix.Prefix || '',
+            lastModified: '',
+            etag: '',
+            size: 0,
+            storageClass: 'DIRECTORY',
+            isFolder: true,
+          });
+        }
+      }
+
+      return NextResponse.json({
+        objects,
+        prefixes: response.CommonPrefixes?.map(p => p.Prefix || '') || [],
+        isTruncated: response.IsTruncated || false,
+        nextContinuationToken: response.NextContinuationToken,
+      });
+
+    } catch (s3Error) {
+      console.error('S3 SDK错误:', s3Error);
+      return NextResponse.json({
+        objects: [],
+        prefixes: [],
+        isTruncated: false,
+        error: `S3 SDK错误: ${s3Error instanceof Error ? s3Error.message : '未知错误'}`
       });
     }
 
@@ -99,60 +167,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-// 解析 S3 XML 响应
-function parseListObjectsV2Response(xmlText: string) {
-  const objects: Array<{
-    key: string;
-    lastModified: string;
-    etag: string;
-    size: number;
-    storageClass: string;
-    isFolder: boolean;
-  }> = [];
-  
-  const prefixes: string[] = [];
-  
-  // 解析 Contents（对象）
-  const contentsRegex = /<Contents>([\s\S]*?)<\/Contents>/g;
-  let match;
-  
-  while ((match = contentsRegex.exec(xmlText)) !== null) {
-    const content = match[1];
-    const key = content.match(/<Key>(.*?)<\/Key>/)?.[1] || '';
-    const lastModified = content.match(/<LastModified>(.*?)<\/LastModified>/)?.[1] || '';
-    const etag = content.match(/<ETag>(.*?)<\/ETag>/)?.[1]?.replace(/"/g, '') || '';
-    const size = parseInt(content.match(/<Size>(.*?)<\/Size>/)?.[1] || '0');
-    const storageClass = content.match(/<StorageClass>(.*?)<\/StorageClass>/)?.[1] || 'STANDARD';
-    
-    if (key) {
-      objects.push({
-        key,
-        lastModified,
-        etag,
-        size,
-        storageClass,
-        isFolder: false,
-      });
-    }
-  }
-  
-  // 解析 CommonPrefixes（文件夹）
-  const prefixRegex = /<CommonPrefixes>[\s\S]*?<Prefix>(.*?)<\/Prefix>[\s\S]*?<\/CommonPrefixes>/g;
-  while ((match = prefixRegex.exec(xmlText)) !== null) {
-    prefixes.push(match[1]);
-  }
-  
-  // 解析其他元数据
-  const isTruncated = xmlText.includes('<IsTruncated>true</IsTruncated>');
-  const nextContinuationTokenMatch = xmlText.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/);
-  const nextContinuationToken = nextContinuationTokenMatch?.[1];
-  
-  return {
-    objects,
-    prefixes,
-    isTruncated,
-    nextContinuationToken,
-  };
 }

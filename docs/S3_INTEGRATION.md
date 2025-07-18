@@ -1,10 +1,36 @@
-# S3 集成配置指南
+````markdown
+# S3 集成与认证配置指南
 
 ## 📋 概述
 
-本文档说明如何配置 Garage WebUI 与 S3 API 的集成，包括认证配置、密钥管理和上传功能。
+本文档说明如何配置 Garage WebUI 与 S3 API 的集成，包括认证配置、密钥管理和上传功能，以及系统的用户认证配置。
 
-## 🔑 核心概念
+## 🔑 系统认证配置
+
+### 用户名密码设置
+
+**位置**: `.env.local` 文件
+
+```env
+NEXT_PUBLIC_DEFAULT_USERNAME=admin
+NEXT_PUBLIC_DEFAULT_PASSWORD=admin123
+```
+
+**默认凭证**:
+
+- 用户名: `admin`
+- 密码: `admin123`
+
+### 修改登录凭证
+
+编辑 `.env.local` 文件自定义登录凭证：
+
+```env
+NEXT_PUBLIC_DEFAULT_USERNAME=your_username
+NEXT_PUBLIC_DEFAULT_PASSWORD=your_password
+```
+
+## 🔑 S3 核心概念
 
 **重要**: 界面上显示的"访问密钥"就是用于 S3 API 认证的密钥！
 
@@ -214,3 +240,4 @@ const uploadOptions = {
 - 程序化访问 Garage 存储
 
 通过智能认证系统，大部分情况下无需手动配置，系统会自动选择合适的密钥进行认证。
+````

@@ -382,6 +382,7 @@ export default function KeysPage() {
       <BucketBindingDialog
         isOpen={showBucketBindingDialog}
         selectedKey={selectedKeyForPermissions}
+        keyDetailedInfo={keyDetailedInfo}
         allBuckets={availableBuckets.map(bucket => ({
           id: bucket.id,
           aliases: bucket.globalAliases || [],
