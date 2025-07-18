@@ -19,7 +19,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/your-username/garage-webui-nextjs.git
+git clone https://github.com/w3ns0n/garage-webui-nextjs.git
 cd garage-webui-nextjs
 
 # 2. 安装依赖
@@ -94,7 +94,7 @@ npm run dev
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/garage-webui-nextjs.git
+git clone https://github.com/w3ns0n/garage-webui-nextjs.git
 cd garage-webui-nextjs
 
 # 安装依赖
@@ -207,7 +207,7 @@ src/
 - **S3 API**: 对象存储操作、文件上传下载
 - **认证 API**: JWT 登录和会话管理
 
-详细 API 文档请参见 [API_REFERENCE.md](./API_REFERENCE.md)。
+详细 API 文档请参见 [API_REFERENCE.md](./docs/API_REFERENCE.md)。
 
 ## 🎯 核心功能
 
@@ -257,7 +257,7 @@ src/
 
 ### 一键部署
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/garage-webui-nextjs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/w3ns0n/garage-webui-nextjs)
 
 ### 手动部署步骤
 
@@ -286,7 +286,7 @@ src/
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/garage-webui-nextjs.git
+git clone https://github.com/w3ns0n/garage-webui-nextjs.git
 cd garage-webui-nextjs
 
 # 安装依赖
@@ -440,15 +440,15 @@ GARAGE_API_BASE_URL=https://api.yourdomain.com/garage
 - 增强的开发体验
 - 更好的 TypeScript 集成
 
-详细迁移信息请参见 [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)。
+详细迁移信息请参见 [MIGRATION_GUIDE.md](./docs/MIGRATION_GUIDE.md)。
 
 ## 📚 相关文档
 
-- [📋 功能概览](./GARAGE_WEBUI_FEATURES.md)
-- [🏗️ 架构指南](./ARCHITECTURE.md)
-- [🔄 迁移指南](./MIGRATION_GUIDE.md)
-- [📡 API 参考](./API_REFERENCE.md)
-- [📊 项目状态](./PROJECT_STATUS.md)
+- [📋 功能概览](./docs/GARAGE_WEBUI_FEATURES.md)
+- [🏗️ 架构指南](./docs/ARCHITECTURE.md)
+- [🔄 迁移指南](./docs/MIGRATION_GUIDE.md)
+- [📡 API 参考](./docs/API_REFERENCE.md)
+- [📊 项目状态](./docs/PROJECT_STATUS.md)
 
 ## 🤝 贡献
 
@@ -512,8 +512,8 @@ GARAGE_API_BASE_URL=https://api.yourdomain.com/garage
 
 ## 📞 支持
 
-- 🐛 [报告问题](https://github.com/your-username/garage-webui-nextjs/issues)
-- 💬 [GitHub 讨论](https://github.com/your-username/garage-webui-nextjs/discussions)
+- 🐛 [报告问题](https://github.com/w3ns0n/garage-webui-nextjs/issues)
+- 💬 [GitHub 讨论](https://github.com/w3ns0n/garage-webui-nextjs/discussions)
 - 📖 [文档](./docs/)
 
 ---

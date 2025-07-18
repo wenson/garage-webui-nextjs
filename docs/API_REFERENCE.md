@@ -1,20 +1,47 @@
-# Garage Web UI API 参考文档
+# Garage WebUI API 参考文档
 
-本文档是 Garage Web UI API 集成的快速参考指南。
+本文档是 Garage WebUI API 集成的快速参考指南。
 
 ## 📚 文档导航
 
 - **[Garage Admin API v2 详细规范](./docs/garage-admin-api-v2-spec.md)** - 完整的 API 文档，基于官方 OpenAPI 规范
-- **[API 快速参考](./docs/API_REFERENCE_QUICK.md)** - 开发者快速参考指南
-- **[本文档](#api-概述)** - 项目集成概述和示例
+- **[API 实现状态分析](./GARAGE_API_V2_IMPLEMENTATION_STATUS.md)** - 详细的功能对接状态
+- **[S3 认证配置指南](./docs/S3_UPLOAD_AUTH.md)** - S3 上传认证配置
+- **[S3 密钥关系说明](./docs/S3_KEYS_RELATIONSHIP.md)** - S3 认证与界面密钥关系
 
-## API 概述
+## 🎯 API 集成概览
 
-Garage Web UI 主要通过以下 API 与 Garage 服务交互：
+### 实现状态
 
-1. **Garage Admin API v2** - 集群管理、存储桶操作、访问密钥管理
-2. **S3 Compatible API** - 对象存储操作
-3. **Web UI Backend API** - 认证和会话管理
+| API 类型            | 完成度 | 状态             |
+| ------------------- | ------ | ---------------- |
+| Garage Admin API v2 | 70%    | 22/32 端点已实现 |
+| S3 Compatible API   | 92%    | 完整对象存储功能 |
+| Web UI Backend API  | 100%   | 认证和会话管理   |
+
+### 核心 API 端点
+
+#### 1. 集群管理 (100% 完成)
+
+- `GET /v2/GetClusterHealth` - 集群健康检查
+- `GET /v2/GetClusterStatus` - 集群状态信息
+- `GET /v2/GetClusterStatistics` - 集群统计信息
+
+#### 2. 存储桶管理 (80% 完成)
+
+- `GET /v2/ListBuckets` - 列出所有存储桶
+- `GET /v2/GetBucketInfo` - 获取存储桶详细信息
+- `POST /v2/CreateBucket` - 创建存储桶
+- `POST /v2/UpdateBucket/{id}` - 更新存储桶配置
+- `POST /v2/DeleteBucket/{id}` - 删除存储桶
+
+#### 3. 访问密钥管理 (85% 完成)
+
+- `GET /v2/ListKeys` - 列出所有访问密钥
+- `GET /v2/GetKeyInfo` - 获取密钥详细信息
+- `POST /v2/CreateKey` - 创建新密钥
+- `POST /v2/UpdateKey/{id}` - 更新密钥信息
+- `POST /v2/DeleteKey/{id}` - 删除密钥
 
 ## 快速开始
 
