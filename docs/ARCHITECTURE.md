@@ -194,8 +194,7 @@ garage-webui-nextjs/
 ├── package.json # 项目依赖
 ├── tailwind.config.js # Tailwind CSS 配置
 ├── tsconfig.json # TypeScript 配置
-├── README.md # 项目说明
-└── Dockerfile # Docker 配置
+└── README.md # 项目说明
 
 ````
 
@@ -446,28 +445,6 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === "production",
   },
 };
-```
-
-### 2. 容器化部署
-
-```dockerfile
-# 多阶段构建
-FROM node:18-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN npm run build
-
-FROM node:18-alpine AS runner
-WORKDIR /app
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-EXPOSE 3000
-CMD ["node", "server.js"]
 ```
 
 ## 监控和日志

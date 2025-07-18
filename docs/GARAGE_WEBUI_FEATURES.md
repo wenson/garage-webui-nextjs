@@ -162,20 +162,7 @@ Garage WebUI 是一个生产级的 Web 管理界面，用于管理 [Garage](http
 
 ## 部署方式
 
-### 1. Docker 部署
-
-```bash
-docker run -p 3909:3909 \
-  -v ./garage.toml:/etc/garage.toml:ro \
-  --restart unless-stopped \
-  khairul169/garage-webui:latest
-```
-
-### 2. Docker Compose 部署
-
-与 Garage 服务一起部署，支持环境变量配置。
-
-### 3. 二进制部署
+### 二进制部署
 
 支持多平台二进制文件直接部署。
 
@@ -256,7 +243,6 @@ docker run -p 3909:3909 \
 
 - **开源协议**: MIT License
 - **GitHub**: [khairul169/garage-webui](https://github.com/khairul169/garage-webui)
-- **Docker Hub**: [khairul169/garage-webui](https://hub.docker.com/r/khairul169/garage-webui)
 - **问题反馈**: GitHub Issues
 - **文档**: README 和 Wiki
 
